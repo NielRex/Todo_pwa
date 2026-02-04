@@ -1,0 +1,427 @@
+import { store } from './store.js';
+import { initDragAndDrop, setupSidebarDrop } from './drag-drop.js';
+
+class App {
+    constructor() {
+        this.currentView = 'today'; // 'today', 'all', 'scheduled', 'completed', or 'list-ID'
+        this.isCompletedHidden = false; // Toggle state
+
+        // DOM Elements
+        this.dom = {
+            sidebar: document.getElementById('sidebar'),
+            smartListsNav: document.getElementById('smart-lists-nav'),
+            customListsNav: document.getElementById('custom-lists-nav'),
+            currentListTitle: document.getElementById('current-list-title'),
+            currentListDate: document.getElementById('current-list-date'),
+            taskList: document.getElementById('task-list'),
+            newTaskInput: document.getElementById('new-task-input'),
+            newTaskDate: document.getElementById('new-task-date'),
+            detailsPanel: document.getElementById('details-panel'),
+            // ... capture others via delegation or direct ID where needed one-off
+        };
+
+        this.init();
+    }
+
+    async init() {
+        // SW Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('SW Registered'))
+                .catch(err => console.error('SW Fail', err));
+        }
+
+        // Subscribe to store
+        store.subscribe(() => {
+            this.render();
+        });
+
+        // Subscribe to sync status
+        store.subscribeSyncStatus((status) => this.updateSyncIndicator(status));
+
+        this.setupEventListeners();
+        this.render();
+
+        // Init Drag & Drop
+        initDragAndDrop();
+
+        // Initialize auto-sync (pull from cloud on startup)
+        await store.initAutoSync();
+    }
+
+    setupEventListeners() {
+        // Global Click Delegation
+        document.addEventListener('click', e => this.handleClick(e));
+
+        // Inputs
+        this.dom.newTaskInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                this.addTask(e.target.value.trim());
+                e.target.value = '';
+            }
+        });
+
+        // Settings Modal
+        document.getElementById('save-settings-btn')?.addEventListener('click', () => this.saveSettings());
+    }
+
+    handleClick(e) {
+        const target = e.target;
+
+        // Navigation
+        if (target.dataset.view) {
+            this.currentView = target.dataset.view;
+            this.render();
+            // Close mobile sidebar if open
+        }
+
+        // Task Checkbox
+        if (target.closest('.task-checkbox')) {
+            const taskId = target.closest('li').dataset.taskId;
+            const task = store.getTasks().find(t => t.id === taskId);
+            store.updateTask(taskId, { completed: !task.completed });
+        }
+
+        // Task Item (Open Details)
+        if (target.closest('.task-item') && !target.closest('.task-checkbox')) {
+            const taskId = target.closest('li').dataset.taskId;
+            this.openDetails(taskId);
+        }
+
+        // Close Details
+        if (target.closest('#close-details-btn')) {
+            this.dom.detailsPanel.classList.add('translate-x-full');
+        }
+
+        // Settings Open
+        if (target.closest('#settings-btn')) {
+            this.openSettings();
+        }
+
+        // Sync
+        if (target.closest('#sync-now-btn')) {
+            this.runSync();
+        }
+
+        // Add List
+        if (target.closest('#add-list-btn')) {
+            const name = prompt('List Name:');
+            if (name) store.addList(name);
+        }
+
+        // Toggle Completed Hidden
+        if (target.closest('#toggle-completed-btn')) {
+            this.isCompletedHidden = !this.isCompletedHidden;
+            this.render(); // Re-render to filter
+        }
+
+        // Mobile Menu
+        if (target.closest('#mobile-menu-btn')) {
+            this.dom.sidebar.classList.toggle('hidden');
+            this.dom.sidebar.classList.toggle('absolute');
+            this.dom.sidebar.classList.toggle('z-50');
+            this.dom.sidebar.classList.toggle('h-full');
+        }
+
+        // Details Panel Actions
+        if (target.id === 'detail-delete-btn') {
+            const id = this.dom.detailsPanel.dataset.activeTaskId;
+            if (id) {
+                store.deleteTask(id);
+                this.dom.detailsPanel.classList.add('translate-x-full');
+            }
+        }
+    }
+
+    // --- Logic ---
+
+    addTask(title) {
+        let listId = 'list-1'; // Default
+        let dueDate = this.dom.newTaskDate.value || null;
+
+        // Contextual Add
+        if (this.currentView.startsWith('list-')) {
+            listId = this.currentView;
+        } else if (this.currentView === 'today') {
+            dueDate = new Date().toISOString().split('T')[0];
+        }
+
+        store.addTask({
+            title,
+            listId: this.currentView.startsWith('list-') ? this.currentView : (store.state.lists[0]?.id || 'inbox'),
+            dueDate
+        });
+
+        this.dom.newTaskDate.value = ''; // Reset date picker
+    }
+
+    openDetails(taskId) {
+        const task = store.getTasks().find(t => t.id === taskId);
+        if (!task) return;
+
+        const panel = this.dom.detailsPanel;
+        panel.dataset.activeTaskId = taskId;
+
+        // Populate fields
+        document.getElementById('detail-title').value = task.title;
+        document.getElementById('detail-notes').value = task.notes || '';
+        document.getElementById('detail-date').value = task.dueDate || '';
+
+        // Priority
+        document.querySelectorAll('.detail-priority-btn').forEach(btn => {
+            if (btn.dataset.priority === task.priority) {
+                btn.classList.add('ring-2', 'ring-indigo-500');
+            } else {
+                btn.classList.remove('ring-2', 'ring-indigo-500');
+            }
+            // Bind click for changing priority
+            btn.onclick = () => store.updateTask(taskId, { priority: btn.dataset.priority });
+        });
+
+        // List Select
+        const listSelect = document.getElementById('detail-list-select');
+        listSelect.innerHTML = store.state.lists.map(l => `<option value="${l.id}" ${l.id === task.listId ? 'selected' : ''}>${l.title}</option>`).join('');
+        listSelect.onchange = (e) => store.updateTask(taskId, { listId: e.target.value });
+
+        // Auto-save title/notes/date on change
+        document.getElementById('detail-title').onchange = (e) => store.updateTask(taskId, { title: e.target.value });
+        document.getElementById('detail-notes').onchange = (e) => store.updateTask(taskId, { notes: e.target.value });
+        document.getElementById('detail-date').onchange = (e) => store.updateTask(taskId, { dueDate: e.target.value });
+
+        panel.classList.remove('translate-x-full');
+    }
+
+    updateSyncIndicator(status) {
+        const dot = document.getElementById('sync-dot');
+        const pulse = document.getElementById('sync-pulse');
+        const text = document.getElementById('sync-text');
+
+        if (!dot || !text) return;
+
+        switch (status.status) {
+            case 'synced':
+                dot.className = 'w-2 h-2 rounded-full bg-green-500';
+                pulse.className = 'absolute inset-0 w-2 h-2 rounded-full bg-green-400 animate-ping opacity-0';
+                text.textContent = status.message || '已同步';
+                text.className = 'text-xs text-green-600 hidden sm:inline';
+                break;
+            case 'syncing':
+                dot.className = 'w-2 h-2 rounded-full bg-blue-500';
+                pulse.className = 'absolute inset-0 w-2 h-2 rounded-full bg-blue-400 animate-ping opacity-75';
+                text.textContent = status.message || '同步中...';
+                text.className = 'text-xs text-blue-600 hidden sm:inline';
+                break;
+            case 'pending':
+                dot.className = 'w-2 h-2 rounded-full bg-yellow-500';
+                pulse.className = 'absolute inset-0 w-2 h-2 rounded-full bg-yellow-400 animate-ping opacity-0';
+                text.textContent = status.message || '等待中...';
+                text.className = 'text-xs text-yellow-600 hidden sm:inline';
+                break;
+            case 'error':
+                dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                pulse.className = 'absolute inset-0 w-2 h-2 rounded-full bg-red-400 animate-ping opacity-0';
+                text.textContent = status.message || '同步失败';
+                text.className = 'text-xs text-red-600 hidden sm:inline';
+                break;
+            case 'disabled':
+            default:
+                dot.className = 'w-2 h-2 rounded-full bg-gray-300';
+                pulse.className = 'absolute inset-0 w-2 h-2 rounded-full bg-gray-400 animate-ping opacity-0';
+                text.textContent = status.message || '未配置';
+                text.className = 'text-xs text-gray-400 hidden sm:inline';
+                break;
+        }
+    }
+
+    openSettings() {
+        const s = store.state.settings;
+        // Display masked token
+        const tokenInput = document.getElementById('gist-token');
+        const gistIdInput = document.getElementById('gist-id');
+
+        if (s.gistToken) {
+            tokenInput.value = s.gistToken.substring(0, 8) + '****';
+            tokenInput.dataset.realToken = s.gistToken;
+        } else {
+            tokenInput.value = '';
+            delete tokenInput.dataset.realToken;
+        }
+
+        gistIdInput.value = s.gistId || '';
+
+        document.getElementById('settings-modal').showModal();
+
+        // Bind save on change (auto save for simplicity)
+        const save = async () => {
+            const tokenValue = tokenInput.value;
+            // If token looks masked, use the real one from dataset
+            const actualToken = tokenValue.includes('****') && tokenInput.dataset.realToken
+                ? tokenInput.dataset.realToken
+                : tokenValue;
+
+            store.updateSettings({
+                gistToken: actualToken,
+                gistId: gistIdInput.value
+            });
+
+            // Re-initialize auto-sync with new settings
+            await store.initAutoSync();
+        };
+
+        tokenInput.onchange = save;
+        gistIdInput.onchange = save;
+
+        // Prevent copying masked token
+        tokenInput.oncopy = (e) => {
+            if (tokenInput.value.includes('****')) {
+                e.preventDefault();
+                alert('无法复制已脱敏的令牌');
+            }
+        };
+    }
+
+    async runSync() {
+        const btn = document.getElementById('sync-now-btn');
+        const status = document.getElementById('sync-status');
+        btn.disabled = true;
+        btn.textContent = 'Syncing...';
+        status.textContent = '';
+
+        try {
+            await store.syncToGist();
+            status.textContent = 'Last synced just now';
+            status.className = 'text-xs text-center text-green-500 h-4';
+        } catch (e) {
+            status.textContent = 'Sync failed. Check console.';
+            status.className = 'text-xs text-center text-red-500 h-4';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Sync Now';
+    }
+
+    // --- Rendering ---
+
+    render() {
+        this.renderSidebar();
+        this.renderMain();
+    }
+
+    renderSidebar() {
+        const smartLists = [
+            { id: 'today', title: 'Today', icon: 'SunIcon', count: this.getTaskCount('today') },
+            { id: 'scheduled', title: 'Scheduled', icon: 'CalendarIcon', count: this.getTaskCount('scheduled') },
+            { id: 'all', title: 'All', icon: 'InboxIcon', count: this.getTaskCount('all') },
+            { id: 'completed', title: 'Completed', icon: 'CheckCircleIcon', count: this.getTaskCount('completed') }
+        ];
+
+        this.dom.smartListsNav.innerHTML = smartLists.map(l => `
+            <a href="#" data-view="${l.id}" class="group flex items-center px-3 py-2 text-sm font-medium rounded-md ${this.currentView === l.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}">
+                <span class="truncate">${l.title}</span>
+                <span class="ml-auto inline-block py-0.5 px-2 text-xs rounded-full ${this.currentView === l.id ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'}">${l.count}</span>
+            </a>
+        `).join('');
+
+        // Custom Lists
+        this.dom.customListsNav.innerHTML = store.state.lists.map(l => `
+            <a href="#" data-view="${l.id}" class="group flex items-center px-3 py-2 text-sm font-medium rounded-md ${this.currentView === l.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}">
+                <span class="w-2.5 h-2.5 mr-3 rounded-full bg-${l.color}-500" aria-hidden="true"></span>
+                <span class="truncate">${l.title}</span>
+                <span class="ml-auto inline-block py-0.5 px-2 text-xs rounded-full ${this.currentView === l.id ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'}">${this.getTaskCount(l.id)}</span>
+            </a>
+        `).join('');
+
+        // Setup drop targets for lists
+        this.dom.customListsNav.querySelectorAll('a').forEach(el => {
+            setupSidebarDrop(el.dataset.view, el);
+        });
+    }
+
+    renderMain() {
+        // Title
+        let title = 'Tasks';
+        if (store.state.lists.find(l => l.id === this.currentView)) {
+            title = store.state.lists.find(l => l.id === this.currentView).title;
+        } else {
+            title = this.currentView.charAt(0).toUpperCase() + this.currentView.slice(1);
+        }
+        this.dom.currentListTitle.textContent = title;
+        this.dom.currentListDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        // Filter Logic
+        let tasks = store.getTasks();
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (this.currentView === 'today') {
+            tasks = tasks.filter(t => t.dueDate === todayStr && !t.completed);
+        } else if (this.currentView === 'scheduled') {
+            tasks = tasks.filter(t => t.dueDate && !t.completed);
+        } else if (this.currentView === 'completed') {
+            tasks = tasks.filter(t => t.completed);
+        } else if (this.currentView === 'all') {
+            tasks = tasks.filter(t => !t.completed || !this.isCompletedHidden); // If "All" view, maybe show everything? User requirements said "Auto generate all".
+        } else {
+            // Custom List
+            tasks = tasks.filter(t => t.listId === this.currentView);
+            if (this.isCompletedHidden) tasks = tasks.filter(t => !t.completed);
+        }
+
+        // Sort (Simple: Incomplete first, then Priority)
+        // const priorityMap = { high: 3, medium: 2, low: 1 };
+        // tasks.sort((a,b) => {
+        //     if(a.completed !== b.completed) return a.completed ? 1 : -1;
+        //     return priorityMap[b.priority] - priorityMap[a.priority];
+        // });
+
+        this.dom.taskList.innerHTML = tasks.map(task => this.createTaskHTML(task)).join('');
+
+        if (tasks.length === 0) {
+            document.getElementById('empty-state').classList.remove('hidden');
+        } else {
+            document.getElementById('empty-state').classList.add('hidden');
+        }
+    }
+
+    getTaskCount(view) {
+        const all = store.getTasks();
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (view === 'today') return all.filter(t => t.dueDate === todayStr && !t.completed).length;
+        if (view === 'scheduled') return all.filter(t => t.dueDate && !t.completed).length;
+        if (view === 'all') return all.filter(t => !t.completed).length;
+        if (view === 'completed') return all.filter(t => t.completed).length;
+        // Custom List
+        return all.filter(t => t.listId === view && !t.completed).length;
+    }
+
+    createTaskHTML(task) {
+        const priorityColors = {
+            low: 'border-l-4 border-l-blue-400',
+            medium: 'border-l-4 border-l-yellow-400',
+            high: 'border-l-4 border-l-red-500'
+        };
+
+        return `
+            <li class="task-item group bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md transition-all flex items-center p-3 cursor-move ${priorityColors[task.priority] || ''}" draggable="true" data-task-id="${task.id}">
+                 <button class="task-checkbox mr-4 flex-shrink-0 text-gray-300 hover:text-indigo-500 ${task.completed ? 'text-indigo-500' : ''}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="${task.completed ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                 </button>
+                 
+                 <div class="flex-1 min-w-0">
+                     <p class="text-sm font-medium text-gray-900 truncate ${task.completed ? 'line-through text-gray-400' : ''}">${task.title}</p>
+                     ${task.dueDate ? `<p class="text-xs text-gray-500 flex items-center mt-1"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>${task.dueDate}</p>` : ''}
+                 </div>
+                 
+                 <button class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity p-2" onclick="event.stopPropagation(); window.app.openDetails('${task.id}')">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                 </button>
+            </li>
+        `;
+    }
+}
+
+// Attach to window for debug/interaction
+window.app = new App();

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private ToDo</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for Webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5);
+            border-radius: 20px;
+        }
+
+        /* Hide scrollbar for sidebar but allow scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gray-100 h-screen overflow-hidden flex text-gray-800 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- Sidebar -->
+    <aside
+        class="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex transition-all duration-300 ease-in-out"
+        id="sidebar">
+        <div class="p-4 flex items-center gap-3 font-bold text-xl text-indigo-600">
+            <img src="icons/icon-192.png" alt="Logo" class="w-8 h-8 rounded-lg shadow-sm">
+            <span>ToDo</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar py-2">
+            <!-- Smart Lists -->
+            <div class="px-3 mb-6">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">Smart Lists</h3>
+                <nav class="space-y-0.5" id="smart-lists-nav">
+                    <!-- Injected by JS -->
+                </nav>
+            </div>
+
+            <!-- Custom Lists -->
+            <div class="px-3">
+                <div class="flex items-center justify-between px-3 mb-2 group">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">My Lists</h3>
+                    <button id="add-list-btn"
+                        class="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Add List">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                </div>
+                <nav class="space-y-0.5" id="custom-lists-nav">
+                    <!-- Injected by JS -->
+                </nav>
+            </div>
+        </div>
+
+        <!-- User/Settings -->
+        <div class="p-4 border-t border-gray-200">
+            <button id="settings-btn"
+                class="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-gray-400" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Settings & Sync
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative w-full h-full overflow-hidden">
+        <!-- Header -->
+        <header
+            class="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 z-10 sticky top-0">
+            <div class="flex items-center gap-4">
+                <button id="mobile-menu-btn" class="md:hidden text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <div>
+                    <h1 id="current-list-title" class="text-2xl font-bold text-gray-900 leading-tight">Overview</h1>
+                    <p id="current-list-date" class="text-xs text-gray-500 hidden sm:block"></p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Sync Status Indicator -->
+                <div id="sync-status-indicator" class="flex items-center gap-2 px-2 py-1 rounded-full" title="同步状态">
+                    <div class="relative">
+                        <div id="sync-dot" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                        <div id="sync-pulse"
+                            class="absolute inset-0 w-2 h-2 rounded-full bg-green-400 animate-ping opacity-0"></div>
+                    </div>
+                    <span id="sync-text" class="text-xs text-gray-400 hidden sm:inline">未配置</span>
+                </div>
+
+                <button id="toggle-completed-btn"
+                    class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
+                    title="Toggle Completed">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                </button>
+                <div id="list-options" class="relative">
+                    <button class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Task List -->
+        <div class="flex-1 overflow-y-auto px-4 sm:px-8 py-6" id="tasks-container">
+            <!-- Tasks Injected JS -->
+            <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                <p>No tasks yet</p>
+            </div>
+
+            <!-- List Container -->
+            <ul id="task-list" class="space-y-2 pb-20"></ul>
+        </div>
+
+        <!-- Add Task Input -->
+        <div
+            class="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur border-t border-gray-200 p-4 sm:px-8 shadow-lg z-20">
+            <div
+                class="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all">
+                <button class="text-gray-400 hover:text-indigo-600 mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </button>
+                <input type="text" id="new-task-input" placeholder="Add a task"
+                    class="bg-transparent border-none outline-none w-full text-gray-800 placeholder-gray-500 text-lg">
+
+                <div class="flex gap-2 ml-2">
+                    <input type="date" id="new-task-date" class="hidden">
+                    <button onclick="document.getElementById('new-task-date').showPicker()"
+                        class="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200" title="Set Due Date">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Details Modal (Slide over) -->
+    <div id="details-panel"
+        class="fixed inset-y-0 right-0 w-full md:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-800">Task Details</h2>
+            <button id="close-details-btn" class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-6 flex-1 overflow-y-auto">
+            <!-- Title Edit -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Task</label>
+                <textarea id="detail-title" rows="2"
+                    class="w-full text-lg font-medium text-gray-800 border-b border-gray-200 focus:border-indigo-500 outline-none resize-none py-1 bg-transparent"></textarea>
+            </div>
+
+            <!-- Priority -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Priority</label>
+                <div class="flex gap-2">
+                    <button
+                        class="detail-priority-btn px-3 py-1.5 rounded-md text-sm font-medium border border-gray-200 hover:border-blue-500 hover:text-blue-600 data-[priority='low']:bg-blue-50 data-[priority='low']:border-blue-500 data-[priority='low']:text-blue-700 transition"
+                        data-priority="low">Low</button>
+                    <button
+                        class="detail-priority-btn px-3 py-1.5 rounded-md text-sm font-medium border border-gray-200 hover:border-yellow-500 hover:text-yellow-600 data-[priority='medium']:bg-yellow-50 data-[priority='medium']:border-yellow-500 data-[priority='medium']:text-yellow-700 transition"
+                        data-priority="medium">Medium</button>
+                    <button
+                        class="detail-priority-btn px-3 py-1.5 rounded-md text-sm font-medium border border-gray-200 hover:border-red-500 hover:text-red-600 data-[priority='high']:bg-red-50 data-[priority='high']:border-red-500 data-[priority='high']:text-red-700 transition"
+                        data-priority="high">High</button>
+                </div>
+            </div>
+
+            <!-- Due Date -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Due Date</label>
+                <input type="date" id="detail-date"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:ring-1 focus:ring-indigo-500">
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes /
+                    Links</label>
+                <textarea id="detail-notes" rows="6"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-gray-50"
+                    placeholder="Add details, links, or subtasks..."></textarea>
+            </div>
+
+            <!-- Move to List -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">List</label>
+                <select id="detail-list-select"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"></select>
+            </div>
+
+        </div>
+        <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+            <span class="text-xs text-gray-400" id="detail-created-at">Created today</span>
+            <button id="detail-delete-btn"
+                class="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-2 rounded hover:bg-red-50 transition">Delete
+                Task</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <dialog id="settings-modal"
+        class="rounded-xl shadow-2xl p-0 backdrop:bg-gray-900/50 w-full max-w-md open:animate-fade-in">
+        <div class="bg-white rounded-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-800">Settings & Sync</h3>
+                <button onclick="document.getElementById('settings-modal').close()"
+                    class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <h4 class="text-sm font-semibold text-gray-600">Gitee 代码片段同步</h4>
+                <p class="text-xs text-gray-500">将任务同步到私有 Gitee 代码片段，实现备份和跨设备访问。</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Gitee 私人令牌 (Token)</label>
+                        <input type="password" id="gist-token" placeholder="粘贴你的私人令牌..."
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                        <p class="text-xs text-gray-400 mt-1">获取方式：Gitee 设置 → 私人令牌 → 生成新令牌 → 勾选 gists 权限</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Gist ID</label>
+                        <input type="text" id="gist-id" placeholder="粘贴代码片段ID..."
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                        <p class="text-xs text-gray-400 mt-1">在 gitee.com/gists 创建新代码片段，从 URL 中复制 ID</p>
+                    </div>
+                </div>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button id="sync-now-btn"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg>
+                        Sync Now
+                    </button>
+                </div>
+                <p id="sync-status" class="text-xs text-center text-gray-400 h-4"></p>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Scripts -->
+    <script type="module" src="js/store.js"></script>
+    <script type="module" src="js/drag-drop.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
