@@ -5,7 +5,9 @@ export class Store {
         this.syncListeners = [];
         this.debounceSyncTimer = null;
         this.autoSyncEnabled = false;
-        this.saveState();
+        this.isSyncing = false; // Prevent overlapping syncs
+        this.lastPullTime = 0; // Throttle pulls
+        this.saveState(false); // Don't sync on initial load
     }
 
     getInitialState() {
@@ -34,12 +36,12 @@ export class Store {
         }
     }
 
-    saveState() {
+    saveState(shouldSync = true) {
         localStorage.setItem('todo_pwa_state', JSON.stringify(this.state));
         this.notifyListeners();
 
-        // Trigger debounced cloud sync if enabled
-        if (this.autoSyncEnabled) {
+        // Trigger debounced cloud sync if enabled AND requested
+        if (this.autoSyncEnabled && shouldSync) {
             this.debouncedCloudSync();
         }
     }
@@ -116,9 +118,12 @@ export class Store {
     // --- Gitee Gist Sync ---
 
     async syncToGist() {
+        if (this.isSyncing) return;
         const { gistToken, gistId } = this.state.settings;
         if (!gistToken) throw new Error('Gitee Token 未配置');
         if (!gistId) throw new Error('Gist ID 未配置');
+
+        this.isSyncing = true;
 
         const url = `https://gitee.com/api/v5/gists/${gistId}?access_token=${gistToken}`;
 
@@ -147,11 +152,22 @@ export class Store {
         } catch (error) {
             console.error('Gitee Sync Error:', error);
             throw error;
+        } finally {
+            this.isSyncing = false;
         }
     }
 
     // --- Cloud to Local Sync (GET) ---
-    async pullFromGist() {
+    async pullFromGist(force = false) {
+        if (this.isSyncing) return;
+
+        // Throttling: Don't pull more than once per minute unless forced
+        const now = Date.now();
+        if (!force && now - this.lastPullTime < 60000) {
+            console.log('Pull throttled (last pull was < 60s ago)');
+            return;
+        }
+
         const { gistToken, gistId } = this.state.settings;
         if (!gistToken || !gistId) {
             throw new Error('同步未配置');
@@ -160,6 +176,8 @@ export class Store {
         const url = `https://gitee.com/api/v5/gists/${gistId}?access_token=${gistToken}`;
 
         try {
+            this.isSyncing = true;
+            this.lastPullTime = now;
             this.notifySyncStatus({ status: 'syncing', message: '正在拉取...' });
 
             const response = await fetch(url, {
@@ -195,6 +213,8 @@ export class Store {
             console.error('Pull from Gitee Error:', error);
             this.notifySyncStatus({ status: 'error', message: error.message || '同步失败' });
             throw error;
+        } finally {
+            this.isSyncing = false;
         }
     }
 

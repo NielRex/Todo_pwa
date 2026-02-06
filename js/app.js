@@ -21,7 +21,8 @@ class App {
             newTaskInput: document.getElementById('new-task-input'),
             newTaskDate: document.getElementById('new-task-date'),
             detailsPanel: document.getElementById('details-panel'),
-            // ... capture others via delegation or direct ID where needed one-off
+            appShell: document.getElementById('app-shell'),
+            backBtn: document.getElementById('back-btn'),
         };
 
         this.init();
@@ -68,17 +69,15 @@ class App {
         // Settings Modal
         document.getElementById('save-settings-btn')?.addEventListener('click', () => this.saveSettings());
 
-        // Menu Button (Mobile & Desktop)
+        // Menu Button (Desktop Trigger)
         this.dom.menuBtn?.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent issues
-            if (window.innerWidth < 768) {
-                // Mobile: Slide Main Content Away (Show Sidebar)
-                this.dom.mainContent.classList.remove('translate-x-0');
-                this.dom.mainContent.classList.add('translate-x-full');
-            } else {
-                // Desktop: Toggle Sidebar Visibility (Collapse/Expand)
-                this.toggleDesktopSidebar();
-            }
+            e.stopPropagation();
+            this.toggleDesktopSidebar();
+        });
+
+        // Mobile Back Button
+        this.dom.backBtn?.addEventListener('click', () => {
+            this.dom.appShell.classList.remove('show-detail');
         });
 
         // Desktop Collapse Button (in Sidebar)
@@ -91,35 +90,75 @@ class App {
         document.getElementById('quick-add-btn')?.addEventListener('click', () => {
             this.dom.newTaskInput.focus();
         });
+
+        // Details Panel Change Delegation
+        this.setupDetailsPanelListeners();
+    }
+
+    setupDetailsPanelListeners() {
+        const getActiveId = () => this.dom.detailsPanel.dataset.activeTaskId;
+
+        document.getElementById('detail-title').addEventListener('change', (e) => {
+            const id = getActiveId();
+            if (id) store.updateTask(id, { title: e.target.value });
+        });
+
+        document.getElementById('detail-notes').addEventListener('change', (e) => {
+            const id = getActiveId();
+            if (id) store.updateTask(id, { notes: e.target.value });
+        });
+
+        document.getElementById('detail-date').addEventListener('change', (e) => {
+            const id = getActiveId();
+            if (id) store.updateTask(id, { dueDate: e.target.value });
+        });
+
+        document.getElementById('detail-list-select').addEventListener('change', (e) => {
+            const id = getActiveId();
+            if (id) store.updateTask(id, { listId: e.target.value });
+        });
+
+        // Priority Buttons Delegation
+        this.dom.detailsPanel.addEventListener('click', (e) => {
+            const btn = e.target.closest('.detail-priority-btn');
+            if (btn) {
+                const id = getActiveId();
+                if (id) {
+                    store.updateTask(id, { priority: btn.dataset.priority });
+                    // Update UI immediately for priority ring
+                    this.dom.detailsPanel.querySelectorAll('.detail-priority-btn').forEach(b => {
+                        b.classList.toggle('ring-2', b === btn);
+                        b.classList.toggle('ring-indigo-500', b === btn);
+                    });
+                }
+            }
+        });
     }
 
     toggleDesktopSidebar() {
         const sidebar = this.dom.sidebar;
+        const icon = document.getElementById('sidebar-toggle-icon');
+        const isCollapsed = sidebar.classList.toggle('collapsed');
 
-        // Use inline style for robust width control on desktop
-        // If width is explicitly 0px, it's collapsed
-        if (sidebar.style.width === '0px') {
-            // Expand: Clear inline style to let Tailwind classes (md:w-64) take over
-            sidebar.style.width = '';
-            sidebar.classList.remove('overflow-hidden');
-        } else {
-            // Collapse: Force 0px width
-            sidebar.style.width = '0px';
-            sidebar.classList.add('overflow-hidden');
+        if (icon) {
+            icon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
         }
+
+        console.log('[Sidebar] Toggle called. State:', isCollapsed ? 'Collapsed' : 'Expanded');
+        sidebar.dataset.collapsed = isCollapsed;
     }
 
     handleClick(e) {
         const target = e.target;
 
         // Navigation
-        if (target.dataset.view) {
-            this.currentView = target.dataset.view;
+        const navItem = target.closest('[data-view]');
+        if (navItem) {
+            this.currentView = navItem.dataset.view;
             this.render();
-            // Mobile: Slide Main Content Back In (Show List)
+            // Mobile: Switch to Detail view
             if (window.innerWidth < 768) {
-                this.dom.mainContent.classList.remove('translate-x-full');
-                this.dom.mainContent.classList.add('translate-x-0'); // Ensure it comes back
+                this.dom.appShell.classList.add('show-detail');
             }
         }
 
@@ -136,10 +175,11 @@ class App {
             this.openDetails(taskId);
         }
 
-        // Close Details
+        // Close Details or Mobile Sidebar
         if (target.closest('#close-details-btn')) {
             this.dom.detailsPanel.classList.add('translate-x-full');
         }
+
 
         // Settings Open
         if (target.closest('#settings-btn')) {
@@ -221,19 +261,11 @@ class App {
             } else {
                 btn.classList.remove('ring-2', 'ring-indigo-500');
             }
-            // Bind click for changing priority
-            btn.onclick = () => store.updateTask(taskId, { priority: btn.dataset.priority });
         });
 
         // List Select
         const listSelect = document.getElementById('detail-list-select');
         listSelect.innerHTML = store.state.lists.map(l => `<option value="${l.id}" ${l.id === task.listId ? 'selected' : ''}>${l.title}</option>`).join('');
-        listSelect.onchange = (e) => store.updateTask(taskId, { listId: e.target.value });
-
-        // Auto-save title/notes/date on change
-        document.getElementById('detail-title').onchange = (e) => store.updateTask(taskId, { title: e.target.value });
-        document.getElementById('detail-notes').onchange = (e) => store.updateTask(taskId, { notes: e.target.value });
-        document.getElementById('detail-date').onchange = (e) => store.updateTask(taskId, { dueDate: e.target.value });
 
         panel.classList.remove('translate-x-full');
     }
@@ -377,48 +409,81 @@ class App {
 
     renderSidebar() {
         const smartLists = [
-            { id: 'tomorrow', title: 'Tomorrow', icon: 'ArrowRightIcon', count: this.getTaskCount('tomorrow') },
-            { id: 'today', title: 'Today', icon: 'SunIcon', count: this.getTaskCount('today') },
-            { id: 'yesterday', title: 'Yesterday', icon: 'ArrowLeftIcon', count: this.getTaskCount('yesterday') },
-            { id: 'all', title: 'All', icon: 'InboxIcon', count: this.getTaskCount('all') },
-            { id: 'scheduled', title: 'Scheduled', icon: 'CalendarIcon', count: this.getTaskCount('scheduled') },
-            { id: 'completed', title: 'Completed', icon: 'CheckCircleIcon', count: this.getTaskCount('completed') }
+            { id: 'tomorrow', title: 'Tomorrow', icon: 'ArrowRightIcon' },
+            { id: 'today', title: 'Today', icon: 'SunIcon' },
+            { id: 'yesterday', title: 'Yesterday', icon: 'ArrowLeftIcon' },
+            { id: 'all', title: 'All', icon: 'InboxIcon' },
+            { id: 'scheduled', title: 'Scheduled', icon: 'CalendarIcon' },
+            { id: 'completed', title: 'Completed', icon: 'CheckCircleIcon' }
         ];
 
-        this.dom.smartListsNav.innerHTML = smartLists.map(l => `
-            <a href="#" data-view="${l.id}" class="group flex items-center px-3 py-2 text-sm font-medium rounded-md ${this.currentView === l.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}">
-                <span class="truncate">${l.title}</span>
-                <span class="ml-auto inline-block py-0.5 px-2 text-xs rounded-full ${this.currentView === l.id ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'}">${l.count}</span>
-            </a>
-        `).join('');
+        // 1. Render Smart Lists (only if needed or just update state)
+        // For simplicity, we compare a hash or just check if children count matches
+        if (this.dom.smartListsNav.children.length === 0) {
+            this.dom.smartListsNav.innerHTML = smartLists.map(l => `
+                <a href="#" data-view="${l.id}" class="group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                    <span class="truncate">${l.title}</span>
+                    <span class="ml-auto p-count inline-block py-0.5 px-2 text-xs rounded-full"></span>
+                </a>
+            `).join('');
+        }
 
-        // Custom Lists
-        this.dom.customListsNav.innerHTML = store.state.lists.map(l => `
-            <a href="#" data-view="${l.id}" class="group flex items-center px-3 py-2 text-sm font-medium rounded-md ${this.currentView === l.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}">
-                <span class="w-2.5 h-2.5 mr-3 rounded-full bg-${l.color}-500" aria-hidden="true"></span>
-                <span class="truncate">${l.title}</span>
-                <span class="ml-auto inline-block py-0.5 px-2 text-xs rounded-full ${this.currentView === l.id ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'}">${this.getTaskCount(l.id)}</span>
-            </a>
-        `).join('');
+        // Update smart list states
+        this.dom.smartListsNav.querySelectorAll('[data-view]').forEach(el => {
+            const id = el.dataset.view;
+            const count = this.getTaskCount(id);
+            const isActive = this.currentView === id;
 
-        // Setup drop targets for lists
-        this.dom.customListsNav.querySelectorAll('a').forEach(el => {
-            setupSidebarDrop(el.dataset.view, el);
+            el.className = `group flex items-center px-3 py-2 text-sm font-medium rounded-md ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`;
+            const countEl = el.querySelector('.p-count');
+            countEl.textContent = count;
+            countEl.className = `ml-auto p-count inline-block py-0.5 px-2 text-xs rounded-full ${isActive ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'}`;
+        });
+
+        // 2. Render Custom Lists
+        const customLists = store.state.lists;
+        const currentCustomIds = Array.from(this.dom.customListsNav.children).map(c => c.dataset.view).join(',');
+        const newCustomIds = customLists.map(l => l.id).join(',');
+
+        if (currentCustomIds !== newCustomIds) {
+            this.dom.customListsNav.innerHTML = customLists.map(l => `
+                <a href="#" data-view="${l.id}" class="group flex items-center px-3 py-2 text-sm font-medium rounded-md list-item-drop">
+                    <span class="w-2.5 h-2.5 mr-3 rounded-full bg-${l.color}-500" aria-hidden="true"></span>
+                    <span class="truncate">${l.title}</span>
+                    <span class="ml-auto p-count inline-block py-0.5 px-2 text-xs rounded-full"></span>
+                </a>
+            `).join('');
+
+            // Re-setup drop targets only when structure changes
+            this.dom.customListsNav.querySelectorAll('.list-item-drop').forEach(el => {
+                setupSidebarDrop(el.dataset.view, el);
+            });
+        }
+
+        // Update custom list states
+        this.dom.customListsNav.querySelectorAll('[data-view]').forEach(el => {
+            const id = el.dataset.view;
+            const count = this.getTaskCount(id);
+            const isActive = this.currentView === id;
+
+            el.className = `group flex items-center px-3 py-2 text-sm font-medium rounded-md ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`;
+            const countEl = el.querySelector('.p-count');
+            countEl.textContent = count;
+            countEl.className = `ml-auto p-count inline-block py-0.5 px-2 text-xs rounded-full ${isActive ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'}`;
         });
     }
 
     renderMain() {
-        // Title
-        let title = 'Tasks';
-        if (store.state.lists.find(l => l.id === this.currentView)) {
-            title = store.state.lists.find(l => l.id === this.currentView).title;
-        } else {
-            title = this.currentView.charAt(0).toUpperCase() + this.currentView.slice(1);
-        }
-        this.dom.currentListTitle.textContent = title;
-        this.dom.currentListDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        const currentList = store.state.lists.find(l => l.id === this.currentView);
+        const title = currentList ? currentList.title : (this.currentView.charAt(0).toUpperCase() + this.currentView.slice(1));
 
-        // Show/hide defer button based on view
+        // Only update title if changed
+        if (this.dom.currentListTitle.textContent !== title) {
+            this.dom.currentListTitle.textContent = title;
+            this.dom.currentListDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        }
+
+        // Show/hide defer button
         const deferBtn = document.getElementById('defer-today-btn');
         if (this.currentView === 'today') {
             deferBtn?.classList.remove('hidden');
@@ -443,26 +508,24 @@ class App {
         } else if (this.currentView === 'completed') {
             tasks = tasks.filter(t => t.completed);
         } else if (this.currentView === 'all') {
-            tasks = tasks.filter(t => !t.completed || !this.isCompletedHidden); // If "All" view, maybe show everything? User requirements said "Auto generate all".
+            tasks = tasks.filter(t => !t.completed || !this.isCompletedHidden);
         } else {
-            // Custom List
             tasks = tasks.filter(t => t.listId === this.currentView);
             if (this.isCompletedHidden) tasks = tasks.filter(t => !t.completed);
         }
 
-        // Sort (Simple: Incomplete first, then Priority)
-        // const priorityMap = { high: 3, medium: 2, low: 1 };
-        // tasks.sort((a,b) => {
-        //     if(a.completed !== b.completed) return a.completed ? 1 : -1;
-        //     return priorityMap[b.priority] - priorityMap[a.priority];
-        // });
+        // Compare current task IDs with new ones to avoid full re-render of the list if possible
+        const newTaskIds = tasks.map(t => t.id + t.completed + t.priority + t.title).join('|');
+        if (this.dom.taskList.dataset.renderedHash === newTaskIds) return;
 
         this.dom.taskList.innerHTML = tasks.map(task => this.createTaskHTML(task)).join('');
+        this.dom.taskList.dataset.renderedHash = newTaskIds;
 
+        const emptyState = document.getElementById('empty-state');
         if (tasks.length === 0) {
-            document.getElementById('empty-state').classList.remove('hidden');
+            emptyState.classList.remove('hidden');
         } else {
-            document.getElementById('empty-state').classList.add('hidden');
+            emptyState.classList.add('hidden');
         }
     }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'todo-pwa-v8'; // Bugfix: Desktop toggle inline style & Mobile fixed layout
+const CACHE_NAME = 'todo-pwa-v9'; // Bugfix: Robust desktop toggle (dataset)
 const ASSETS = [
   './',
   './index.html',

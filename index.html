@@ -14,6 +14,16 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --glass-blur: blur(12px);
+        }
+
+        html {
+            font-size: 16px;
+        }
+
         /* Custom scrollbar for Webkit */
         ::-webkit-scrollbar {
             width: 6px;
@@ -24,11 +34,47 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, 0.5);
+            background-color: rgba(156, 163, 175, 0.3);
             border-radius: 20px;
         }
 
-        /* Hide scrollbar for sidebar but allow scroll */
+        /* Responsive Layout Utilities */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-color: var(--glass-border);
+        }
+
+        /* Mobile Master-Detail Transitions */
+        @media (max-width: 767px) {
+            #app-shell.show-detail #sidebar {
+                transform: translateX(-100%);
+            }
+
+            #app-shell.show-detail #main-content {
+                transform: translateX(-100%);
+            }
+
+            #sidebar,
+            #main-content {
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+        }
+
+        /* Desktop Push-Pull Transition */
+        @media (min-width: 768px) {
+            #sidebar {
+                transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+            }
+
+            #sidebar.collapsed {
+                width: 0 !important;
+                min-width: 0 !important;
+                opacity: 0;
+            }
+        }
+
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -43,193 +89,207 @@
 <body
     class="bg-gray-100 h-screen overflow-hidden flex text-gray-800 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-700">
 
-    <!-- Sidebar (Base Layer) -->
-    <aside
-        class="fixed inset-y-0 left-0 w-full md:w-64 bg-white border-r border-gray-200 flex flex-col z-40 transition-all duration-300 ease-in-out"
-        id="sidebar">
-        <div
-            class="p-4 flex items-center justify-between gap-3 font-bold text-xl text-indigo-600 border-b border-gray-100 md:border-none">
-            <div class="flex items-center gap-3">
-                <img src="icons/icon-192.png" alt="Logo" class="w-8 h-8 rounded-lg shadow-sm">
-                <span>ToDo</span>
-            </div>
-            <!-- Desktop Collapse Button -->
-            <button id="desktop-collapse-btn"
-                class="hidden md:block text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-            </button>
-        </div>
+    <!-- App Shell Container -->
+    <div id="app-shell" class="relative w-full h-full flex overflow-hidden">
 
-        <div class="flex-1 overflow-y-auto no-scrollbar py-2">
-            <!-- Smart Lists -->
-            <div class="px-3 mb-6">
-                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">Smart Lists</h3>
-                <nav class="space-y-0.5" id="smart-lists-nav">
-                    <!-- Injected by JS -->
-                </nav>
+        <!-- Sidebar (Master Layer) -->
+        <aside
+            class="relative flex-none w-full md:w-1/4 lg:w-64 glass-panel border-r border-gray-200 flex flex-col z-40 transition-all duration-300"
+            id="sidebar">
+            <div
+                class="p-4 flex items-center justify-between gap-3 font-bold text-xl text-indigo-600 border-b border-gray-100 md:border-none">
+                <div class="flex items-center gap-3">
+                    <img src="icons/icon-192.png" alt="Logo" class="w-8 h-8 rounded-lg shadow-sm">
+                    <span>ToDo</span>
+                </div>
+                <!-- Desktop Collapse Button (Triangle) -->
+                <button id="desktop-collapse-btn"
+                    class="hidden md:block text-gray-400 hover:text-indigo-600 p-1 rounded-md hover:bg-white/50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform duration-300"
+                        id="sidebar-toggle-icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15 19l-7-7 7-7v14z" />
+                    </svg>
+                </button>
             </div>
 
-            <!-- Custom Lists -->
-            <div class="px-3">
-                <div class="flex items-center justify-between px-3 mb-2 group">
-                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">My Lists</h3>
-                    <button id="add-list-btn"
-                        class="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Add List">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+            <div class="flex-1 overflow-y-auto no-scrollbar py-2">
+                <!-- Smart Lists -->
+                <div class="px-3 mb-6">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">Smart Lists</h3>
+                    <nav class="space-y-0.5" id="smart-lists-nav">
+                        <!-- Injected by JS -->
+                    </nav>
+                </div>
+
+                <!-- Custom Lists -->
+                <div class="px-3">
+                    <div class="flex items-center justify-between px-3 mb-2 group">
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">My Lists</h3>
+                        <button id="add-list-btn"
+                            class="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Add List">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    </div>
+                    <nav class="space-y-0.5" id="custom-lists-nav">
+                        <!-- Injected by JS -->
+                    </nav>
+                </div>
+            </div>
+
+            <!-- User/Settings -->
+            <div class="p-4 border-t border-gray-200">
+                <button id="settings-btn"
+                    class="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-gray-400" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Settings & Sync
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content (Detail Layer) -->
+        <main id="main-content"
+            class="flex-none md:flex-1 w-full h-full bg-gray-100 flex flex-col z-50 transform md:translate-x-0">
+            <!-- Header -->
+            <header
+                class="h-16 glass-panel border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 z-10 sticky top-0">
+                <div class="flex items-center gap-4">
+                    <!-- Back Button (Mobile Detail View) -->
+                    <button id="back-btn" class="md:hidden text-gray-500 hover:text-indigo-600 transition-colors mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <!-- Menu Button (Desktop Trigger) -->
+                    <button id="menu-btn" class="hidden md:block text-gray-500 hover:text-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <div>
+                            <h1 id="current-list-title" class="text-2xl font-bold text-gray-900 leading-tight">Overview
+                            </h1>
+                            <p id="current-list-date" class="text-xs text-gray-500 hidden sm:block"></p>
+                        </div>
+                        <!-- Defer to Tomorrow Button (only shown in Today view) -->
+                        <button id="defer-today-btn"
+                            class="hidden group px-3 py-2 bg-white/20 backdrop-blur-md border border-gray-200/50 rounded-lg hover:bg-white/40 transition-all shadow-sm hover:shadow-md"
+                            title="推迟到明天">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 text-indigo-600 group-hover:text-indigo-700 transition-colors"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <!-- Sync Status Indicator -->
+                    <div id="sync-status-indicator" class="flex items-center gap-2 px-2 py-1 rounded-full" title="同步状态">
+                        <div class="relative">
+                            <div id="sync-dot" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                            <div id="sync-pulse"
+                                class="absolute inset-0 w-2 h-2 rounded-full bg-green-400 animate-ping opacity-0"></div>
+                        </div>
+                        <span id="sync-text" class="text-xs text-gray-400 hidden sm:inline">未配置</span>
+                    </div>
+
+                    <button id="toggle-completed-btn"
+                        class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
+                        title="Toggle Completed">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                    <!-- Quick Add Button (Mobile Only) -->
+                    <button id="quick-add-btn"
+                        class="sm:hidden p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                        title="Add Task">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
                     </button>
-                </div>
-                <nav class="space-y-0.5" id="custom-lists-nav">
-                    <!-- Injected by JS -->
-                </nav>
-            </div>
-        </div>
-
-        <!-- User/Settings -->
-        <div class="p-4 border-t border-gray-200">
-            <button id="settings-btn"
-                class="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-gray-400" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Settings & Sync
-            </button>
-        </div>
-    </aside>
-
-    <!-- Main Content (Top Layer) -->
-    <main id="main-content"
-        class="fixed inset-0 w-full h-full bg-gray-100 flex flex-col z-50 transform transition-transform duration-300 ease-in-out md:static md:flex-1 md:translate-x-0">
-        <!-- Header -->
-        <header
-            class="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 z-10 sticky top-0">
-            <div class="flex items-center gap-4">
-                <!-- Menu Button (Mobile: Back to Sidebar | Desktop: Expand Sidebar) -->
-                <button id="menu-btn" class="text-gray-500 hover:text-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
-                <div class="flex items-center gap-3">
-                    <div>
-                        <h1 id="current-list-title" class="text-2xl font-bold text-gray-900 leading-tight">Overview</h1>
-                        <p id="current-list-date" class="text-xs text-gray-500 hidden sm:block"></p>
+                    <div id="list-options" class="relative">
+                        <button class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                        </button>
                     </div>
-                    <!-- Defer to Tomorrow Button (only shown in Today view) -->
-                    <button id="defer-today-btn"
-                        class="hidden group px-3 py-2 bg-white/20 backdrop-blur-md border border-gray-200/50 rounded-lg hover:bg-white/40 transition-all shadow-sm hover:shadow-md"
-                        title="推迟到明天">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 text-indigo-600 group-hover:text-indigo-700 transition-colors" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
-                    </button>
                 </div>
-            </div>
+            </header>
 
-            <div class="flex items-center gap-2">
-                <!-- Sync Status Indicator -->
-                <div id="sync-status-indicator" class="flex items-center gap-2 px-2 py-1 rounded-full" title="同步状态">
-                    <div class="relative">
-                        <div id="sync-dot" class="w-2 h-2 rounded-full bg-gray-300"></div>
-                        <div id="sync-pulse"
-                            class="absolute inset-0 w-2 h-2 rounded-full bg-green-400 animate-ping opacity-0"></div>
-                    </div>
-                    <span id="sync-text" class="text-xs text-gray-400 hidden sm:inline">未配置</span>
-                </div>
-
-                <button id="toggle-completed-btn"
-                    class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
-                    title="Toggle Completed">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
+            <!-- Task List -->
+            <div class="flex-1 overflow-y-auto w-full md:px-8 py-6 pb-24" id="tasks-container">
+                <!-- Tasks Injected JS -->
+                <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                     </svg>
-                </button>
-                <!-- Quick Add Button (Mobile Only) -->
-                <button id="quick-add-btn"
-                    class="sm:hidden p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-                    title="Add Task">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                </button>
-                <div id="list-options" class="relative">
-                    <button class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                    </button>
+                    <p>No tasks yet</p>
                 </div>
-            </div>
-        </header>
 
-        <!-- Task List -->
-        <div class="flex-1 overflow-y-auto w-full md:px-8 py-6 pb-24" id="tasks-container">
-            <!-- Tasks Injected JS -->
-            <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-                <p>No tasks yet</p>
+                <!-- List Container -->
+                <ul id="task-list" class="space-y-1 md:space-y-2"></ul>
             </div>
 
-            <!-- List Container -->
-            <ul id="task-list" class="space-y-1 md:space-y-2"></ul>
-        </div>
-
-        <!-- Add Task Input -->
-        <div
-            class="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur border-t border-gray-200 p-4 sm:px-8 shadow-lg z-20">
+            <!-- Add Task Input -->
             <div
-                class="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all">
-                <button class="text-gray-400 hover:text-indigo-600 mr-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                </button>
-                <input type="text" id="new-task-input" placeholder="Add a task"
-                    class="bg-transparent border-none outline-none w-full text-gray-800 placeholder-gray-500 text-lg">
-
-                <div class="flex gap-2 ml-2">
-                    <input type="date" id="new-task-date" class="hidden">
-                    <button onclick="document.getElementById('new-task-date').showPicker()"
-                        class="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200" title="Set Due Date">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                class="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur border-t border-gray-200 p-4 sm:px-8 shadow-lg z-20">
+                <div
+                    class="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all">
+                    <button class="text-gray-400 hover:text-indigo-600 mr-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
                     </button>
+                    <input type="text" id="new-task-input" placeholder="Add a task"
+                        class="bg-transparent border-none outline-none w-full text-gray-800 placeholder-gray-500 text-lg">
+
+                    <div class="flex gap-2 ml-2">
+                        <input type="date" id="new-task-date" class="hidden">
+                        <button onclick="document.getElementById('new-task-date').showPicker()"
+                            class="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200"
+                            title="Set Due Date">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-    </main>
+        </main>
+    </div> <!-- End App Shell -->
 
     <!-- Details Modal (Slide over) -->
     <div id="details-panel"
