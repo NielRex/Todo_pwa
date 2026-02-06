@@ -281,6 +281,34 @@ export class Store {
         }
     }
 
+    // --- Maintenance & Debugging ---
+
+    async forceSync() {
+        console.log('Force Sync Triggered');
+        return await this.syncToGist();
+    }
+
+    async runMaintenanceMigration() {
+        console.log('Starting maintenance migration...');
+        let count = 0;
+
+        // Ensure we have latest data
+        await this.pullFromGist(true);
+
+        this.state.tasks.forEach(task => {
+            if (!task.owner) {
+                task.owner = 'jackson';
+                count++;
+            }
+        });
+
+        if (count > 0) {
+            this.saveState(false);
+            await this.syncToGist();
+        }
+        return count;
+    }
+
     // --- Enable/Disable Auto-Sync ---
     setAutoSync(enabled) {
         this.autoSyncEnabled = enabled;

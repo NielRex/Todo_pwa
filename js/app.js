@@ -60,9 +60,12 @@ class App {
     }
 
     checkAuth() {
+        console.log('Checking auth status. Current user:', store.currentUser);
         if (!store.currentUser) {
+            console.log('No user found, showing login overlay.');
             this.dom.loginOverlay.classList.remove('hidden');
         } else {
+            console.log('User logged in, hiding login overlay.');
             this.dom.loginOverlay.classList.add('hidden');
         }
     }
@@ -99,6 +102,53 @@ class App {
             if (confirm('Are you sure you want to logout?')) {
                 store.logout();
             }
+        });
+
+        // Developer Toolbox Trigger
+        let versionClicks = 0;
+        document.getElementById('app-version')?.addEventListener('click', () => {
+            versionClicks++;
+            if (versionClicks >= 5) {
+                const toolbox = document.getElementById('dev-toolbox');
+                toolbox.classList.toggle('hidden');
+                this.showToast(toolbox.classList.contains('hidden') ? '工具箱已隐藏' : '开发者模式已激活');
+                versionClicks = 0;
+            }
+        });
+
+        // Dev Button Listeners
+        document.getElementById('dev-force-sync')?.addEventListener('click', async () => {
+            try {
+                this.showToast('正在强制同步...');
+                await store.forceSync();
+                this.showToast('同步完成');
+            } catch (e) {
+                this.showToast('同步失败: ' + e.message);
+            }
+        });
+
+        document.getElementById('dev-cleanup')?.addEventListener('click', async () => {
+            try {
+                this.showToast('正在清洗数据...');
+                const count = await store.runMaintenanceMigration();
+                this.showToast(`归属完成：已更新 ${count} 条任务`);
+            } catch (e) {
+                this.showToast('清洗失败: ' + e.message);
+            }
+        });
+
+        document.getElementById('dev-reset')?.addEventListener('click', () => {
+            if (confirm('确定要清除所有本地数据并重置应用吗？此操作不可撤销。')) {
+                localStorage.clear();
+                this.showToast('缓存已清理，正在重启...');
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+
+        document.getElementById('dev-log')?.addEventListener('click', () => {
+            console.log('Current Store State:');
+            console.table(store.state.tasks);
+            this.showToast('数据已打印至控制台');
         });
 
         // Menu Button (Desktop Trigger)
@@ -593,8 +643,8 @@ class App {
                  </button>
                  
                  <div class="flex-1 min-w-0">
-                     <p class="text-sm font-medium text-gray-900 truncate ${task.completed ? 'line-through text-gray-400' : ''}">${task.title}</p>
-                     ${task.dueDate ? `<p class="text-xs text-gray-500 flex items-center mt-1"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>${task.dueDate}</p>` : ''}
+                      <p class="text-sm font-medium text-gray-900 truncate ${task.completed ? 'line-through text-gray-400' : ''}">${task.title}</p>
+                      ${task.dueDate ? `<p class="text-xs text-gray-500 flex items-center mt-1"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>${task.dueDate}</p>` : ''}
                  </div>
                  
                  <button class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity p-2" onclick="event.stopPropagation(); window.app.openDetails('${task.id}')">
@@ -604,6 +654,24 @@ class App {
                  </button>
             </li>
         `;
+    }
+
+    showToast(message) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+
+        container.appendChild(toast);
+
+        // Auto remove
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-20px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 }
 

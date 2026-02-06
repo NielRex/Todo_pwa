@@ -145,11 +145,92 @@
             max-width: 400px;
             text-align: center;
         }
+
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: #1f2937;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            animation: toast-in 0.3s ease-out forwards;
+            pointer-events: auto;
+        }
+
+        @keyframes toast-in {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Developer Toolbox */
+        #dev-toolbox {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            background: rgba(243, 244, 246, 0.8);
+            border-radius: 1rem;
+            border: 1px dashed #d1d5db;
+        }
+
+        #dev-toolbox.hidden {
+            display: none;
+        }
+
+        .dev-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .dev-btn {
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #4b5563;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .dev-btn:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+            background: #f5f3ff;
+        }
     </style>
 </head>
 
 <body
     class="bg-gray-100 h-screen overflow-hidden flex text-gray-800 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
 
     <!-- Login Overlay -->
     <div id="login-overlay" class="hidden">
@@ -493,6 +574,54 @@
                     </button>
                 </div>
                 <p id="sync-status" class="text-xs text-center text-gray-400 h-4"></p>
+
+                <!-- Footer & Dev Trigger -->
+                <div class="pt-4 border-t border-gray-100 mt-6 flex flex-col items-center gap-4">
+                    <p id="app-version"
+                        class="text-[10px] text-gray-300 cursor-pointer select-none hover:text-gray-400 transition-colors">
+                        version 1.12.0
+                    </p>
+
+                    <!-- Developer Toolbox (Hidden) -->
+                    <div id="dev-toolbox" class="hidden w-full">
+                        <h5 class="text-[11px] font-bold text-gray-400 uppercase tracking-widest text-center mb-1">
+                            Developer Toolbox</h5>
+                        <div class="dev-grid">
+                            <button id="dev-force-sync" class="dev-btn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                    </path>
+                                </svg>
+                                强制同步
+                            </button>
+                            <button id="dev-cleanup" class="dev-btn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                    </path>
+                                </svg>
+                                数据清洗
+                            </button>
+                            <button id="dev-reset"
+                                class="dev-btn hover:!text-red-600 hover:!border-red-200 hover:!bg-red-50">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                重置缓存
+                            </button>
+                            <button id="dev-log" class="dev-btn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                                控制台输出
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </dialog>
