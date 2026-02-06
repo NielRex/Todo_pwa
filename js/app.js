@@ -12,6 +12,7 @@ class App {
             sidebar: document.getElementById('sidebar'),
             mainContent: document.getElementById('main-content'),
             menuBtn: document.getElementById('menu-btn'),
+            backBtn: document.getElementById('back-btn'),
             desktopCollapseBtn: document.getElementById('desktop-collapse-btn'),
             smartListsNav: document.getElementById('smart-lists-nav'),
             customListsNav: document.getElementById('custom-lists-nav'),
