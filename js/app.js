@@ -25,6 +25,7 @@ class App {
             loginOverlay: document.getElementById('login-overlay'),
             loginForm: document.getElementById('login-form'),
             loginError: document.getElementById('login-error'),
+            userInitials: document.getElementById('user-initials'),
         };
 
         this.init();
@@ -98,9 +99,23 @@ class App {
         });
 
         // Logout Button
-        document.getElementById('logout-btn')?.addEventListener('click', () => {
+        const handleLogout = () => {
             if (confirm('Are you sure you want to logout?')) {
                 store.logout();
+            }
+        };
+
+        document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+        document.getElementById('sidebar-logout-btn')?.addEventListener('click', handleLogout);
+
+        // Sidebar Sync Button
+        document.getElementById('sidebar-sync-now-btn')?.addEventListener('click', async () => {
+            try {
+                this.showToast('正在手动同步...');
+                await store.forceSync();
+                this.showToast('同步完成');
+            } catch (e) {
+                this.showToast('同步失败: ' + e.message);
             }
         });
 
@@ -218,7 +233,12 @@ class App {
     }
 
     toggleDesktopSidebar() {
+        console.log('[Sidebar] toggleDesktopSidebar called');
         const sidebar = this.dom.sidebar;
+        if (!sidebar) {
+            console.error('[Sidebar] Sidebar element not found!');
+            return;
+        }
         const icon = document.getElementById('sidebar-toggle-icon');
         const isCollapsed = sidebar.classList.toggle('collapsed');
 
@@ -226,8 +246,11 @@ class App {
             icon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
         }
 
-        console.log('[Sidebar] Toggle called. State:', isCollapsed ? 'Collapsed' : 'Expanded');
+        console.log('[Sidebar] State changed. Collapsed:', isCollapsed);
         sidebar.dataset.collapsed = isCollapsed;
+
+        // Broadcast change if needed
+        this.render();
     }
 
     handleClick(e) {
@@ -553,6 +576,12 @@ class App {
             countEl.textContent = count;
             countEl.className = `ml-auto p-count inline-block py-0.5 px-2 text-xs rounded-full ${isActive ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'}`;
         });
+
+        // Update User Initials
+        if (this.dom.userInitials && store.currentUser) {
+            this.dom.userInitials.textContent = store.currentUser.charAt(0).toUpperCase();
+            this.dom.userInitials.title = `Logged in as: ${store.currentUser}`;
+        }
     }
 
     renderMain() {
