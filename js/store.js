@@ -200,11 +200,12 @@ export class Store {
 
     // --- Debounced Auto-Save ---
     debouncedCloudSync() {
+        // Set pending status FIRST, before clearing timer
+        this.notifySyncStatus({ status: 'pending', message: '等待保存...' });
+
         if (this.debounceSyncTimer) {
             clearTimeout(this.debounceSyncTimer);
         }
-
-        this.notifySyncStatus({ status: 'pending', message: '等待保存...' });
 
         this.debounceSyncTimer = setTimeout(async () => {
             try {

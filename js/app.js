@@ -1,5 +1,6 @@
 import { store } from './store.js';
 import { initDragAndDrop, setupSidebarDrop } from './drag-drop.js';
+import { getLocalDateString, getTomorrowDateString, getYesterdayDateString } from './utils.js';
 
 class App {
     constructor() {
@@ -113,6 +114,11 @@ class App {
         if (target.closest('#toggle-completed-btn')) {
             this.isCompletedHidden = !this.isCompletedHidden;
             this.render(); // Re-render to filter
+        }
+
+        // Defer Today Tasks to Tomorrow
+        if (target.closest('#defer-today-btn')) {
+            this.deferTodayTasksToTomorrow();
         }
 
         // Mobile Menu
@@ -299,6 +305,28 @@ class App {
         btn.textContent = 'Sync Now';
     }
 
+    deferTodayTasksToTomorrow() {
+        const todayStr = getLocalDateString();
+        const tomorrowStr = getTomorrowDateString();
+        const todayTasks = store.getTasks().filter(t => t.dueDate === todayStr && !t.completed);
+
+        if (todayTasks.length === 0) {
+            alert('No tasks to defer');
+            return;
+        }
+
+        // Batch update all today tasks to tomorrow
+        todayTasks.forEach(task => {
+            store.updateTask(task.id, { dueDate: tomorrowStr });
+        });
+
+        // Show confirmation
+        const count = todayTasks.length;
+        alert(`已将 ${count} 个任务推迟到明天`);
+
+        // The store will automatically trigger sync via debouncedCloudSync
+    }
+
     // --- Rendering ---
 
     render() {
@@ -308,9 +336,11 @@ class App {
 
     renderSidebar() {
         const smartLists = [
+            { id: 'tomorrow', title: 'Tomorrow', icon: 'ArrowRightIcon', count: this.getTaskCount('tomorrow') },
             { id: 'today', title: 'Today', icon: 'SunIcon', count: this.getTaskCount('today') },
-            { id: 'scheduled', title: 'Scheduled', icon: 'CalendarIcon', count: this.getTaskCount('scheduled') },
+            { id: 'yesterday', title: 'Yesterday', icon: 'ArrowLeftIcon', count: this.getTaskCount('yesterday') },
             { id: 'all', title: 'All', icon: 'InboxIcon', count: this.getTaskCount('all') },
+            { id: 'scheduled', title: 'Scheduled', icon: 'CalendarIcon', count: this.getTaskCount('scheduled') },
             { id: 'completed', title: 'Completed', icon: 'CheckCircleIcon', count: this.getTaskCount('completed') }
         ];
 
@@ -347,12 +377,26 @@ class App {
         this.dom.currentListTitle.textContent = title;
         this.dom.currentListDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
+        // Show/hide defer button based on view
+        const deferBtn = document.getElementById('defer-today-btn');
+        if (this.currentView === 'today') {
+            deferBtn?.classList.remove('hidden');
+        } else {
+            deferBtn?.classList.add('hidden');
+        }
+
         // Filter Logic
         let tasks = store.getTasks();
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateString();
+        const tomorrowStr = getTomorrowDateString();
+        const yesterdayStr = getYesterdayDateString();
 
         if (this.currentView === 'today') {
             tasks = tasks.filter(t => t.dueDate === todayStr && !t.completed);
+        } else if (this.currentView === 'tomorrow') {
+            tasks = tasks.filter(t => t.dueDate === tomorrowStr && !t.completed);
+        } else if (this.currentView === 'yesterday') {
+            tasks = tasks.filter(t => t.dueDate === yesterdayStr);
         } else if (this.currentView === 'scheduled') {
             tasks = tasks.filter(t => t.dueDate && !t.completed);
         } else if (this.currentView === 'completed') {
@@ -383,9 +427,13 @@ class App {
 
     getTaskCount(view) {
         const all = store.getTasks();
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateString();
+        const tomorrowStr = getTomorrowDateString();
+        const yesterdayStr = getYesterdayDateString();
 
         if (view === 'today') return all.filter(t => t.dueDate === todayStr && !t.completed).length;
+        if (view === 'tomorrow') return all.filter(t => t.dueDate === tomorrowStr && !t.completed).length;
+        if (view === 'yesterday') return all.filter(t => t.dueDate === yesterdayStr).length;
         if (view === 'scheduled') return all.filter(t => t.dueDate && !t.completed).length;
         if (view === 'all') return all.filter(t => !t.completed).length;
         if (view === 'completed') return all.filter(t => t.completed).length;

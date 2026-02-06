@@ -11,6 +11,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Custom scrollbar for Webkit */
         ::-webkit-scrollbar {
@@ -107,9 +109,19 @@
                             d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
-                <div>
-                    <h1 id="current-list-title" class="text-2xl font-bold text-gray-900 leading-tight">Overview</h1>
-                    <p id="current-list-date" class="text-xs text-gray-500 hidden sm:block"></p>
+                <div class="flex items-center gap-3">
+                    <div>
+                        <h1 id="current-list-title" class="text-2xl font-bold text-gray-900 leading-tight">Overview</h1>
+                        <p id="current-list-date" class="text-xs text-gray-500 hidden sm:block"></p>
+                    </div>
+                    <!-- Defer to Tomorrow Button (only shown in Today view) -->
+                    <button id="defer-today-btn" 
+                        class="hidden group px-3 py-2 bg-white/20 backdrop-blur-md border border-gray-200/50 rounded-lg hover:bg-white/40 transition-all shadow-sm hover:shadow-md"
+                        title="推迟到明天">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600 group-hover:text-indigo-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
