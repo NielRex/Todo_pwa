@@ -1,5 +1,10 @@
 export class Store {
     constructor() {
+        this.users = {
+            'sunny': '930328',
+            'jackson': '950127'
+        };
+        this.currentUser = localStorage.getItem('todo_user');
         this.state = this.loadState() || this.getInitialState();
         this.listeners = [];
         this.syncListeners = [];
@@ -66,9 +71,26 @@ export class Store {
 
     // --- Actions ---
 
+    login(username, password) {
+        if (this.users[username] === password) {
+            this.currentUser = username;
+            localStorage.setItem('todo_user', username);
+            this.notifyListeners();
+            return true;
+        }
+        return false;
+    }
+
+    logout() {
+        localStorage.removeItem('todo_user');
+        location.reload();
+    }
+
     getTasks(filterFn = null) {
-        if (!filterFn) return this.state.tasks;
-        return this.state.tasks.filter(filterFn);
+        // Multi-tenancy: Always filter by owner
+        const userTasks = this.state.tasks.filter(t => t.owner === this.currentUser);
+        if (!filterFn) return userTasks;
+        return userTasks.filter(filterFn);
     }
 
     addTask(task) {
@@ -79,6 +101,7 @@ export class Store {
             priority: 'medium',
             notes: '',
             dueDate: null,
+            owner: this.currentUser, // Inject current user
             ...task
         };
         this.state.tasks.push(newTask);

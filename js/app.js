@@ -22,7 +22,9 @@ class App {
             newTaskDate: document.getElementById('new-task-date'),
             detailsPanel: document.getElementById('details-panel'),
             appShell: document.getElementById('app-shell'),
-            backBtn: document.getElementById('back-btn'),
+            loginOverlay: document.getElementById('login-overlay'),
+            loginForm: document.getElementById('login-form'),
+            loginError: document.getElementById('login-error'),
         };
 
         this.init();
@@ -50,8 +52,19 @@ class App {
         // Init Drag & Drop
         initDragAndDrop();
 
+        // Initial Auth Check
+        this.checkAuth();
+
         // Initialize auto-sync (pull from cloud on startup)
         await store.initAutoSync();
+    }
+
+    checkAuth() {
+        if (!store.currentUser) {
+            this.dom.loginOverlay.classList.remove('hidden');
+        } else {
+            this.dom.loginOverlay.classList.add('hidden');
+        }
     }
 
     setupEventListeners() {
@@ -68,6 +81,25 @@ class App {
 
         // Settings Modal
         document.getElementById('save-settings-btn')?.addEventListener('click', () => this.saveSettings());
+
+        // Login Form
+        this.dom.loginForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('login-username').value;
+            const pass = document.getElementById('login-password').value;
+            if (store.login(user, pass)) {
+                this.dom.loginOverlay.classList.add('hidden');
+            } else {
+                this.dom.loginError.classList.remove('hidden');
+            }
+        });
+
+        // Logout Button
+        document.getElementById('logout-btn')?.addEventListener('click', () => {
+            if (confirm('Are you sure you want to logout?')) {
+                store.logout();
+            }
+        });
 
         // Menu Button (Desktop Trigger)
         this.dom.menuBtn?.addEventListener('click', (e) => {
