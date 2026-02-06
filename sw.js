@@ -1,4 +1,4 @@
-const CACHE_NAME = 'todo-pwa-v7'; // Bugfix: Sidebar toggle
+const CACHE_NAME = 'todo-pwa-v8'; // Bugfix: Desktop toggle inline style & Mobile fixed layout
 const ASSETS = [
   './',
   './index.html',

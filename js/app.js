@@ -95,23 +95,17 @@ class App {
 
     toggleDesktopSidebar() {
         const sidebar = this.dom.sidebar;
-        const mainContent = this.dom.mainContent; // Assuming we might need to adjust main, but we rely on flex
 
-        // We assume 'expanded' is the default state (w-64 or md:w-64 present)
-        // We check if it is currently collapsed
-        const isCollapsed = sidebar.classList.contains('w-0');
-
-        if (isCollapsed) {
-            // Expand
-            // Remove w-0 and overflow-hidden
-            sidebar.classList.remove('w-0', 'overflow-hidden');
-            // Ensure width classes are restored (md:w-64 should handle it, but we can force it)
-            sidebar.classList.add('md:w-64');
+        // Use inline style for robust width control on desktop
+        // If width is explicitly 0px, it's collapsed
+        if (sidebar.style.width === '0px') {
+            // Expand: Clear inline style to let Tailwind classes (md:w-64) take over
+            sidebar.style.width = '';
+            sidebar.classList.remove('overflow-hidden');
         } else {
-            // Collapse
-            // We must override the existing md:w-64
-            sidebar.classList.remove('md:w-64');
-            sidebar.classList.add('w-0', 'overflow-hidden');
+            // Collapse: Force 0px width
+            sidebar.style.width = '0px';
+            sidebar.classList.add('overflow-hidden');
         }
     }
 
