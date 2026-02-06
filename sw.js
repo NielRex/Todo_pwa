@@ -1,10 +1,11 @@
-const CACHE_NAME = 'todo-pwa-v3'; // Updated icon paths
+const CACHE_NAME = 'todo-pwa-v4'; // Increment version
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './js/app.js',
   './js/store.js',
+  './js/utils.js', // Added new file
   './js/drag-drop.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
