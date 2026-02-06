@@ -69,9 +69,11 @@ class App {
         document.getElementById('save-settings-btn')?.addEventListener('click', () => this.saveSettings());
 
         // Menu Button (Mobile & Desktop)
-        this.dom.menuBtn?.addEventListener('click', () => {
+        this.dom.menuBtn?.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent issues
             if (window.innerWidth < 768) {
                 // Mobile: Slide Main Content Away (Show Sidebar)
+                this.dom.mainContent.classList.remove('translate-x-0');
                 this.dom.mainContent.classList.add('translate-x-full');
             } else {
                 // Desktop: Toggle Sidebar Visibility (Collapse/Expand)
@@ -80,7 +82,8 @@ class App {
         });
 
         // Desktop Collapse Button (in Sidebar)
-        this.dom.desktopCollapseBtn?.addEventListener('click', () => {
+        this.dom.desktopCollapseBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
             this.toggleDesktopSidebar();
         });
 
@@ -92,24 +95,23 @@ class App {
 
     toggleDesktopSidebar() {
         const sidebar = this.dom.sidebar;
-        const isCollapsed = sidebar.classList.contains('w-0') || sidebar.classList.contains('hidden'); // Simplified check
+        const mainContent = this.dom.mainContent; // Assuming we might need to adjust main, but we rely on flex
 
-        // Actually, let's use a class to track collapsed state or just toggle classes
-        // For smooth animation, we toggle width.
-        // Tailwind 'w-64' is on by default.
-        if (sidebar.classList.contains('w-64')) {
-            // Collapse
-            sidebar.classList.remove('w-64', 'md:w-64');
-            sidebar.classList.add('w-0', 'overflow-hidden');
-            // Adjust main content margin
-            // on desktop main is relative/static flex-1. 
-            // If sidebar is w-0, flex layout handles it if sidebar is flex item? 
-            // Sidebar is 'fixed' on mobile but 'md:static md:flex' on desktop.
-            // So if we make it w-0, main should expand.
-        } else {
+        // We assume 'expanded' is the default state (w-64 or md:w-64 present)
+        // We check if it is currently collapsed
+        const isCollapsed = sidebar.classList.contains('w-0');
+
+        if (isCollapsed) {
             // Expand
-            sidebar.classList.add('w-64', 'md:w-64');
+            // Remove w-0 and overflow-hidden
             sidebar.classList.remove('w-0', 'overflow-hidden');
+            // Ensure width classes are restored (md:w-64 should handle it, but we can force it)
+            sidebar.classList.add('md:w-64');
+        } else {
+            // Collapse
+            // We must override the existing md:w-64
+            sidebar.classList.remove('md:w-64');
+            sidebar.classList.add('w-0', 'overflow-hidden');
         }
     }
 
@@ -123,6 +125,7 @@ class App {
             // Mobile: Slide Main Content Back In (Show List)
             if (window.innerWidth < 768) {
                 this.dom.mainContent.classList.remove('translate-x-full');
+                this.dom.mainContent.classList.add('translate-x-0'); // Ensure it comes back
             }
         }
 

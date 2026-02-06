@@ -1,4 +1,4 @@
-const CACHE_NAME = 'todo-pwa-v6'; // View-Switching UI update
+const CACHE_NAME = 'todo-pwa-v7'; // Bugfix: Sidebar toggle
 const ASSETS = [
   './',
   './index.html',
