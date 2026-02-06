@@ -43,13 +43,25 @@
 <body
     class="bg-gray-100 h-screen overflow-hidden flex text-gray-800 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-700">
 
-    <!-- Sidebar -->
+    <!-- Sidebar (Base Layer) -->
     <aside
-        class="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex transition-all duration-300 ease-in-out"
+        class="fixed inset-y-0 left-0 w-full md:w-64 bg-white border-r border-gray-200 flex flex-col z-40 transition-all duration-300 ease-in-out"
         id="sidebar">
-        <div class="p-4 flex items-center gap-3 font-bold text-xl text-indigo-600">
-            <img src="icons/icon-192.png" alt="Logo" class="w-8 h-8 rounded-lg shadow-sm">
-            <span>ToDo</span>
+        <div
+            class="p-4 flex items-center justify-between gap-3 font-bold text-xl text-indigo-600 border-b border-gray-100 md:border-none">
+            <div class="flex items-center gap-3">
+                <img src="icons/icon-192.png" alt="Logo" class="w-8 h-8 rounded-lg shadow-sm">
+                <span>ToDo</span>
+            </div>
+            <!-- Desktop Collapse Button -->
+            <button id="desktop-collapse-btn"
+                class="hidden md:block text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+            </button>
         </div>
 
         <div class="flex-1 overflow-y-auto no-scrollbar py-2">
@@ -96,13 +108,15 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col relative w-full h-full overflow-hidden">
+    <!-- Main Content (Top Layer) -->
+    <main id="main-content"
+        class="absolute inset-0 w-full h-full bg-gray-100 flex flex-col z-50 transform transition-transform duration-300 ease-in-out md:static md:flex-1 md:translate-x-0">
         <!-- Header -->
         <header
             class="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 z-10 sticky top-0">
             <div class="flex items-center gap-4">
-                <button id="mobile-menu-btn" class="md:hidden text-gray-500 hover:text-gray-700">
+                <!-- Menu Button (Mobile: Back to Sidebar | Desktop: Expand Sidebar) -->
+                <button id="menu-btn" class="text-gray-500 hover:text-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -115,11 +129,14 @@
                         <p id="current-list-date" class="text-xs text-gray-500 hidden sm:block"></p>
                     </div>
                     <!-- Defer to Tomorrow Button (only shown in Today view) -->
-                    <button id="defer-today-btn" 
+                    <button id="defer-today-btn"
                         class="hidden group px-3 py-2 bg-white/20 backdrop-blur-md border border-gray-200/50 rounded-lg hover:bg-white/40 transition-all shadow-sm hover:shadow-md"
                         title="推迟到明天">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600 group-hover:text-indigo-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5 text-indigo-600 group-hover:text-indigo-700 transition-colors" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
                     </button>
                 </div>
@@ -147,6 +164,15 @@
                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                 </button>
+                <!-- Quick Add Button (Mobile Only) -->
+                <button id="quick-add-btn"
+                    class="sm:hidden p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                    title="Add Task">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </button>
                 <div id="list-options" class="relative">
                     <button class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -160,7 +186,7 @@
         </header>
 
         <!-- Task List -->
-        <div class="flex-1 overflow-y-auto px-4 sm:px-8 py-6" id="tasks-container">
+        <div class="flex-1 overflow-y-auto w-full md:px-8 py-6 pb-24" id="tasks-container">
             <!-- Tasks Injected JS -->
             <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50" fill="none"
@@ -172,7 +198,7 @@
             </div>
 
             <!-- List Container -->
-            <ul id="task-list" class="space-y-2 pb-20"></ul>
+            <ul id="task-list" class="space-y-1 md:space-y-2"></ul>
         </div>
 
         <!-- Add Task Input -->

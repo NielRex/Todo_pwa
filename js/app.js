@@ -10,6 +10,9 @@ class App {
         // DOM Elements
         this.dom = {
             sidebar: document.getElementById('sidebar'),
+            mainContent: document.getElementById('main-content'),
+            menuBtn: document.getElementById('menu-btn'),
+            desktopCollapseBtn: document.getElementById('desktop-collapse-btn'),
             smartListsNav: document.getElementById('smart-lists-nav'),
             customListsNav: document.getElementById('custom-lists-nav'),
             currentListTitle: document.getElementById('current-list-title'),
@@ -64,6 +67,50 @@ class App {
 
         // Settings Modal
         document.getElementById('save-settings-btn')?.addEventListener('click', () => this.saveSettings());
+
+        // Menu Button (Mobile & Desktop)
+        this.dom.menuBtn?.addEventListener('click', () => {
+            if (window.innerWidth < 768) {
+                // Mobile: Slide Main Content Away (Show Sidebar)
+                this.dom.mainContent.classList.add('translate-x-full');
+            } else {
+                // Desktop: Toggle Sidebar Visibility (Collapse/Expand)
+                this.toggleDesktopSidebar();
+            }
+        });
+
+        // Desktop Collapse Button (in Sidebar)
+        this.dom.desktopCollapseBtn?.addEventListener('click', () => {
+            this.toggleDesktopSidebar();
+        });
+
+        // Quick Add Button
+        document.getElementById('quick-add-btn')?.addEventListener('click', () => {
+            this.dom.newTaskInput.focus();
+        });
+    }
+
+    toggleDesktopSidebar() {
+        const sidebar = this.dom.sidebar;
+        const isCollapsed = sidebar.classList.contains('w-0') || sidebar.classList.contains('hidden'); // Simplified check
+
+        // Actually, let's use a class to track collapsed state or just toggle classes
+        // For smooth animation, we toggle width.
+        // Tailwind 'w-64' is on by default.
+        if (sidebar.classList.contains('w-64')) {
+            // Collapse
+            sidebar.classList.remove('w-64', 'md:w-64');
+            sidebar.classList.add('w-0', 'overflow-hidden');
+            // Adjust main content margin
+            // on desktop main is relative/static flex-1. 
+            // If sidebar is w-0, flex layout handles it if sidebar is flex item? 
+            // Sidebar is 'fixed' on mobile but 'md:static md:flex' on desktop.
+            // So if we make it w-0, main should expand.
+        } else {
+            // Expand
+            sidebar.classList.add('w-64', 'md:w-64');
+            sidebar.classList.remove('w-0', 'overflow-hidden');
+        }
     }
 
     handleClick(e) {
@@ -73,7 +120,10 @@ class App {
         if (target.dataset.view) {
             this.currentView = target.dataset.view;
             this.render();
-            // Close mobile sidebar if open
+            // Mobile: Slide Main Content Back In (Show List)
+            if (window.innerWidth < 768) {
+                this.dom.mainContent.classList.remove('translate-x-full');
+            }
         }
 
         // Task Checkbox
@@ -121,13 +171,7 @@ class App {
             this.deferTodayTasksToTomorrow();
         }
 
-        // Mobile Menu
-        if (target.closest('#mobile-menu-btn')) {
-            this.dom.sidebar.classList.toggle('hidden');
-            this.dom.sidebar.classList.toggle('absolute');
-            this.dom.sidebar.classList.toggle('z-50');
-            this.dom.sidebar.classList.toggle('h-full');
-        }
+        // (Mobile Menu logic replaced by Menu Button listener)
 
         // Details Panel Actions
         if (target.id === 'detail-delete-btn') {

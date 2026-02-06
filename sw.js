@@ -1,4 +1,4 @@
-const CACHE_NAME = 'todo-pwa-v4'; // Increment version
+const CACHE_NAME = 'todo-pwa-v6'; // View-Switching UI update
 const ASSETS = [
   './',
   './index.html',
