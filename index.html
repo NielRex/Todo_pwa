@@ -442,7 +442,8 @@
             </header>
 
             <!-- Task List -->
-            <div class="flex-1 overflow-y-auto w-full md:px-8 py-6 pb-24" id="tasks-container">
+            <!-- Task List -->
+            <div class="flex-1 overflow-y-auto w-full md:px-8 py-6" id="tasks-container">
                 <!-- Tasks Injected JS -->
                 <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50" fill="none"
@@ -457,24 +458,24 @@
                 <ul id="task-list" class="space-y-1 md:space-y-2"></ul>
             </div>
 
-            <!-- Add Task Input -->
-            <div
-                class="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur border-t border-gray-200 p-4 sm:px-8 shadow-lg z-20">
+            <!-- Add Task Input (Pinned to bottom of main-content) -->
+            <div id="new-task-container"
+                class="bg-white/95 backdrop-blur-md border-t border-gray-100 p-4 sm:px-8 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div
-                    class="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all">
-                    <button class="text-gray-400 hover:text-indigo-600 mr-3">
+                    class="relative flex items-center bg-gray-50 rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all shadow-sm">
+                    <button class="text-gray-400 hover:text-indigo-600 mr-4">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
                     </button>
                     <input type="text" id="new-task-input" placeholder="Add a task"
-                        class="bg-transparent border-none outline-none w-full text-gray-800 placeholder-gray-500 text-lg">
+                        class="bg-transparent border-none outline-none w-full text-gray-800 placeholder-gray-400 text-lg">
 
-                    <div class="flex gap-2 ml-2">
+                    <div class="flex gap-3 ml-2">
                         <input type="date" id="new-task-date" class="hidden">
                         <button onclick="document.getElementById('new-task-date').showPicker()"
-                            class="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200"
+                            class="text-gray-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-white transition-all"
                             title="Set Due Date">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
