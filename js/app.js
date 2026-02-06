@@ -157,7 +157,7 @@ class App {
             this.currentView = navItem.dataset.view;
             this.render();
             // Mobile: Switch to Detail view
-            if (window.innerWidth < 768) {
+            if (window.innerWidth < 1400) {
                 this.dom.appShell.classList.add('show-detail');
             }
         }
